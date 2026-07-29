@@ -1,0 +1,11 @@
+packages:
+  - "packages/*"
+  - "public/apps/*"
+
+catalog:
+  zod: "latest"
+  drizzle-orm: "latest"
+
+allowBuilds:
+  '@clerk/shared': true
+  esbuild: true

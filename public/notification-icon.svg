@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <rect width="192" height="192" rx="40" fill="#0D1117"/>
+  <rect x="16" y="16" width="160" height="160" rx="32" fill="#161B22"/>
+  <!-- Checkmark square icon -->
+  <rect x="44" y="44" width="104" height="104" rx="16" fill="#3B5BFA" opacity="0.15"/>
+  <rect x="44" y="44" width="104" height="104" rx="16" stroke="#3B5BFA" stroke-width="4" fill="none"/>
+  <!-- Checkmark -->
+  <path d="M68 96 L86 114 L124 76" stroke="#3B5BFA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
