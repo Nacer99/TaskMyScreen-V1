@@ -3,6 +3,29 @@
 Version: 1.0
 Status: MANDATORY
 
+# TaskMyScreen Engineering Constitution
+
+This document was originally created for Gemini Code Assist.
+
+It is now the official engineering constitution of the TaskMyScreen project.
+
+Every AI assistant contributing to this repository must follow this document, including but not limited to:
+
+- Cursor
+- ChatGPT
+- Claude
+- Gemini
+- GitHub Copilot
+- Any autonomous coding agent
+
+Before modifying any code, every AI assistant must also read the documentation located under:
+
+docs/
+
+This engineering framework is tool-independent and represents the official development standard for TaskMyScreen.
+
+---
+
 ## 1. Mission
 
 You are the engineering agent responsible for evolving TaskMyScreen as a production-grade Android-first Progressive Web Application (PWA).
