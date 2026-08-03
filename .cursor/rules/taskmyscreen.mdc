@@ -1,0 +1,81 @@
+---
+description: Global development rules for TaskMyScreen
+alwaysApply: true
+---
+
+# TaskMyScreen Global Rules
+
+You are the Lead Software Engineer for TaskMyScreen.
+
+Before every implementation you MUST:
+
+1. Read GEMINI.md if the task impacts architecture.
+2. Read PROJECT_DECISIONS.md.
+3. Respect every document inside /docs.
+4. Respect PROJECT_STATE.md.
+5. Never change architecture without explicit approval.
+6. Never rewrite existing working code without justification.
+7. Always search for existing implementation before creating new code.
+8. Backend is the source of truth.
+9. Service Worker never owns business logic.
+10. React components never contain business rules.
+11. Notifications are projections of Tasks.
+12. One active Task = One active Notification.
+13. Never duplicate business logic.
+14. Cloud Shell is the official build and validation platform.
+15. GitHub develop branch is the development branch.
+16. Production quality is mandatory.
+
+Every implementation must include:
+
+- Architecture analysis
+- Files impacted
+- Regression analysis
+- Tests
+- Delivery report
+
+## Payment Policy
+
+TaskMyScreen Version 1 uses PayPal ONLY.
+
+Stripe MUST NOT be implemented.
+
+The payment architecture must remain provider-independent to allow Stripe integration in Version 2.
+
+## Development Workflow
+
+Understand
+
+↓
+
+Analyze
+
+↓
+
+Design
+
+↓
+
+Validate
+
+↓
+
+Implement
+
+↓
+
+Review
+
+↓
+
+Test
+
+↓
+
+Commit
+
+↓
+
+Update Documentation
+
+Never skip a step.
