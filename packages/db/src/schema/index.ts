@@ -1,10 +1,19 @@
 import { pgTable, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
-  id: text("id").primaryKey(), // ID Clerk
+  id: text("id").primaryKey(),
+
   email: text("email").notNull(),
-  tier: text("tier").default("free").notNull(), // free, pro, lifetime
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  tier: text("tier").default("free").notNull(),
+
+  monthlyTasksUsed: integer("monthly_tasks_used")
+    .default(0)
+    .notNull(),
+
+  createdAt: timestamp("created_at")
+    .defaultNow()
+    .notNull(),
 });
 
 export const tasksTable = pgTable("tasks", {

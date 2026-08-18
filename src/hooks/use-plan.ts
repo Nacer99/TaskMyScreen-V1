@@ -7,11 +7,7 @@ export function usePlan() {
   const { isSignedIn } = useAuth();
 
   const { data: profile, isLoading } = useGetUserProfile({
-    query: {
-      enabled: isSignedIn === true,
-      queryKey: getGetUserProfileQueryKey(),
-      staleTime: 30_000,
-    },
+    query: {}
   });
 
   const plan = profile?.plan ?? "free";

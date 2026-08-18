@@ -9,6 +9,8 @@ import { usersTable, tasksTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import tasksRouter from "./routes/tasks.js";
+import usersRouter from "./routes/users.js";
+import statsRouter from "./routes/stats.js";
 
 const logger = pino({
   transport: {
@@ -38,6 +40,8 @@ app.use(clerkMiddleware());
 
 // Enregistrement du routeur pour la gestion des tâches
 app.use("/api/tasks", tasksRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/tasks/stats", statsRouter);
 
 // --- ROUTE WEBHOOK STRIPE (Sécurisée avec signature) ---
 app.post("/api/webhooks/stripe", async (req: any, res) => {

@@ -76,6 +76,10 @@
   },
   "dependencies": {
     "@clerk/react": "^6.7.2",
-    "@clerk/themes": "^2.4.57"
+    "@clerk/themes": "^2.4.57",
+
+    "@workspace/api-client-react": "workspace:*",
+    "@workspace/api-zod": "workspace:*",
+    "@workspace/db": "workspace:*"
   }
 }
