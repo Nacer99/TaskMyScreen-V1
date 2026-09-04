@@ -1,4 +1,3 @@
-export * from "./client";
-export * from "./hooks";
 export * from "./types";
 export * from "./queryKeys";
+export * from "./hooks";

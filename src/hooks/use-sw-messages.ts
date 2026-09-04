@@ -1,208 +1,78 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+/**
+ * Listens for messages posted by the Service Worker and routes them into the app.
+ *
+ * Handled message types:
+ *  TASK_MARK_DONE       — calls the complete-task API for the given taskId
+ *  NAVIGATE_TO_TASK     — navigates to the task edit page
+ *  NAVIGATE_TO_RESCHEDULE — navigates to the task edit page in reschedule mode
+ */
 
+import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import {
-  useUpdateTask,
+  useCompleteTask,
   getListTasksQueryKey,
   getGetTaskStatsQueryKey,
 } from "@workspace/api-client-react";
-
-import {
-  cancelNotificationByTaskId,
-  scheduleNotification,
-} from "@/lib/notifications";
-
-interface SwMessage {
-
-  type: string;
-
-  taskId?: number | string;
-
-  notificationId?: string;
-
-  minutes?: number;
-
-}
+import { useQueryClient } from "@tanstack/react-query";
+import { cancelNotificationByTaskId } from "@/lib/notifications";
 
 export function useSwMessages() {
-
-  const [, navigate] = useLocation();
-
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { mutate: completeTask } = useCompleteTask();
 
-  const updateTask = useUpdateTask();
+  // Refs so the effect closure never goes stale
+  const setLocationRef = useRef(setLocation);
+  setLocationRef.current = setLocation;
+  const completeTaskRef = useRef(completeTask);
+  completeTaskRef.current = completeTask;
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
 
   useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
 
-    if (!("serviceWorker" in navigator)) {
+    const handler = (event: MessageEvent) => {
+      const msg = event.data as {
+        type: string;
+        taskId?: number | string;
+        url?: string;
+      };
+      if (!msg?.type) return;
 
-      return;
-
-    }
-
-    const handler = (event: MessageEvent<SwMessage>) => {
-
-      const message = event.data;
-
-      if (!message?.type) {
-
-        return;
-
-      }
-
-      switch (message.type) {
-
+      switch (msg.type) {
         case "TASK_MARK_DONE": {
-
-          if (!message.taskId) {
-
-            return;
-
-          }
-
-          updateTask.mutate(
-
+          // Task ids are backend-generated UUID strings — never coerce to Number.
+          const id = msg.taskId != null ? String(msg.taskId) : undefined;
+          if (!id) return;
+          completeTaskRef.current(
+            { id, data: { completed: true } },
             {
-
-              id: message.taskId,
-
-              data: {
-
-                completed: true,
-
-              },
-
-            },
-
-            {
-
               onSuccess: () => {
-
-                cancelNotificationByTaskId(
-
-                  message.taskId!,
-
-                );
-
-                queryClient.invalidateQueries({
-
+                cancelNotificationByTaskId(id);
+                queryClientRef.current.invalidateQueries({
                   queryKey: getListTasksQueryKey(),
-
                 });
-
-                queryClient.invalidateQueries({
-
+                queryClientRef.current.invalidateQueries({
                   queryKey: getGetTaskStatsQueryKey(),
-
                 });
-
               },
-
-            },
-
+            }
           );
-
           break;
-
         }
-
-        case "TASK_RESCHEDULE": {
-
-          if (!message.taskId) {
-
-            return;
-
-          }
-
-          navigate(
-
-            `/tasks/${message.taskId}/edit?reschedule=1`,
-
-          );
-
+        case "NAVIGATE_TO_TASK":
+          if (msg.taskId) setLocationRef.current(`/tasks/${msg.taskId}/edit`);
           break;
-
-        }
-
-        case "TASK_SNOOZE": {
-
-          if (!message.taskId) {
-
-            return;
-
-          }
-
-          navigate(
-
-            `/tasks/${message.taskId}/edit?snooze=1`,
-
-          );
-
+        case "NAVIGATE_TO_RESCHEDULE":
+          if (msg.taskId)
+            setLocationRef.current(`/tasks/${msg.taskId}/edit?reschedule=1`);
           break;
-
-        }
-
-        case "NAVIGATE_TO_TASK": {
-
-          if (!message.taskId) {
-
-            return;
-
-          }
-
-          navigate(
-
-            `/tasks/${message.taskId}`,
-
-          );
-
-          break;
-
-        }
-
-        case "NOTIFICATION_DISMISSED": {
-
-          break;
-
-        }
-
-        default:
-
-          break;
-
       }
-
     };
 
-    navigator.serviceWorker.addEventListener(
-
-      "message",
-
-      handler,
-
-    );
-
-    return () => {
-
-      navigator.serviceWorker.removeEventListener(
-
-        "message",
-
-        handler,
-
-      );
-
-    };
-
-  }, [
-
-    navigate,
-
-    queryClient,
-
-    updateTask,
-
-  ]);
-
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, []); // stable — deps accessed via refs
 }

@@ -20,7 +20,6 @@ try {
       "express",
       "@google-cloud/storage",
       "pg",
-      "stripe",
       "@clerk/express"
     ],
   }).then(() => {

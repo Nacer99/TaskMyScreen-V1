@@ -87,10 +87,11 @@ function PermissionBanner({
 function ScheduledCard({
   notif,
   onCancel,
-  tick,
+  tick: _tick,
 }: {
   notif: ScheduledNotification;
   onCancel: (id: string) => void;
+  /** Unused directly — forces this card to re-render each second so the countdown updates. */
   tick: number;
 }) {
   return (
@@ -191,7 +192,7 @@ export default function NotifyPrototype() {
         if (result !== "granted") return;
       }
 
-      const id = scheduleTestNotification(
+      scheduleTestNotification(
         title || "TaskMyScreen Reminder",
         body || "Your task is due. Tap to open.",
         seconds,

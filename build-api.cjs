@@ -21,7 +21,7 @@ try {
       pinoPlugin({ transports: ["pino-pretty"] })
     ],
     // On garde externes les modules natifs ou complexes pour éviter des conflits dans le bundle
-    external: ["express", "@google-cloud/storage", "pg", "stripe", "@clerk/express"],
+    external: ["express", "@google-cloud/storage", "pg", "@clerk/express"],
   }).then(() => {
     console.log("⚡ [SUCCESS] Build backend de l'API compilé avec succès !");
   }).catch((error) => {

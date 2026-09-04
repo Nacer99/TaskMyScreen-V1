@@ -23,7 +23,9 @@
     /* Path Alias */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@workspace/api-client-react": ["packages/api-client-react/src/index.ts"],
+      "@workspace/object-storage-web": ["packages/object-storage-web/src/index.ts"]
     }
   },
   "include": ["src"],

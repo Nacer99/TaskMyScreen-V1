@@ -4,13 +4,12 @@ import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
 import pino from "pino";
 import { clerkMiddleware } from "@clerk/express";
-import { db } from "@workspace/db";
-import { usersTable, tasksTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
-import Stripe from "stripe";
 import tasksRouter from "./routes/tasks.js";
 import usersRouter from "./routes/users.js";
-import statsRouter from "./routes/stats.js";
+import billingRouter from "./routes/billing.js";
+import storageRouter from "./routes/storage.js";
+import { verifyPayPalWebhookSignature, parsePayPalCaptureEvent } from "./payments/paypal.js";
+import { assignPlanFromPayment } from "./services/plan.js";
 
 const logger = pino({
   transport: {
@@ -20,64 +19,58 @@ const logger = pino({
 });
 
 const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16" as any,
-});
 
-// Middleware essentiel pour capturer le corps brut (indispensable pour la sécurité des webhooks Stripe)
-app.use(
-  express.json({
-    verify: (req: any, res, buf) => {
-      req.rawBody = buf;
-    },
-  })
-);
-
+app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(pinoHttp({ logger }));
 app.use(clerkMiddleware());
 
-// Enregistrement du routeur pour la gestion des tâches
+// Enregistrement des routeurs
 app.use("/api/tasks", tasksRouter);
 app.use("/api/users", usersRouter);
-app.use("/api/tasks/stats", statsRouter);
+app.use("/api/billing", billingRouter);
+app.use("/api/storage", storageRouter);
 
-// --- ROUTE WEBHOOK STRIPE (Sécurisée avec signature) ---
-app.post("/api/webhooks/stripe", async (req: any, res) => {
-  const sig = req.headers["stripe-signature"];
-  let event;
-
+// --- WEBHOOK PAYPAL ---
+// Defense-in-depth alongside POST /api/billing/capture: applies the plan
+// upgrade even if the browser never returns to call /capture itself
+// (closed tab, network drop, etc). Every event is verified against PayPal
+// before anything is written to the database.
+app.post("/api/webhooks/paypal", async (req, res) => {
   try {
-    event = stripe.webhooks.constructEvent(
-      req.rawBody,
-      sig || "",
-      process.env.STRIPE_WEBHOOK_SECRET || ""
+    const verified = await verifyPayPalWebhookSignature(
+      {
+        transmissionId: String(req.headers["paypal-transmission-id"] ?? ""),
+        transmissionTime: String(req.headers["paypal-transmission-time"] ?? ""),
+        certUrl: String(req.headers["paypal-cert-url"] ?? ""),
+        authAlgo: String(req.headers["paypal-auth-algo"] ?? ""),
+        transmissionSig: String(req.headers["paypal-transmission-sig"] ?? ""),
+      },
+      req.body
     );
-  } catch (err: any) {
-    logger.error(`❌ Erreur Signature Webhook: ${err.message}`);
-    res.status(400).send(`Webhook Error: ${err.message}`);
-    return;
-  }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.client_reference_id;
-    
-    if (userId) {
-      await db
-        .update(usersTable)
-        .set({ tier: "pro" })
-        .where(eq(usersTable.id, userId));
-      logger.info(`💰 Utilisateur ${userId} est passé au plan PRO via Stripe`);
+    if (!verified) {
+      logger.warn("❌ Signature de webhook PayPal invalide");
+      res.status(400).json({ received: false });
+      return;
     }
-  }
 
-  res.json({ received: true });
+    const parsed = parsePayPalCaptureEvent(req.body);
+    if (parsed) {
+      const tier = await assignPlanFromPayment(parsed.userId, parsed.priceType);
+      logger.info(`💰 Utilisateur ${parsed.userId} est passé au plan ${tier.toUpperCase()} via PayPal (webhook)`);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    logger.error(`❌ Erreur webhook PayPal: ${(err as Error).message}`);
+    res.status(500).json({ received: false });
+  }
 });
 
 // --- ROUTES API DE BASE ---
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 

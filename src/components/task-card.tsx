@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { formatDistanceToNow, format, isPast, differenceInMinutes } from "date-fns";
+import { format, isPast, differenceInMinutes } from "date-fns";
 import { Check, Clock, AlertCircle, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { Task } from "@workspace/api-client-react";

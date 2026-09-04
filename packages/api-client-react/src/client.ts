@@ -1,125 +1,61 @@
-import type { TaskStatus } from "./queryKeys";
-import type {
-  Task,
-  TaskCreateInput,
-  TaskUpdateInput,
-  TaskStats,
-  UserProfile,
-  CheckoutSession,
-} from "./types";
+/**
+ * Thin fetch wrapper around the TaskMyScreen REST API.
+ *
+ * Auth: every request carries the Clerk session token as a Bearer header
+ * (see hooks.ts — each hook resolves the token via Clerk's `useAuth().getToken()`
+ * and passes it in here). The backend is the sole source of truth; this client
+ * never makes authorization decisions itself.
+ */
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
 
 export class ApiError extends Error {
-  readonly status: number;
-  readonly body: unknown;
-
-  constructor(message: string, status: number, body: unknown) {
+  status: number;
+  details?: unknown;
+  constructor(status: number, message: string, details?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
-    this.body = body;
+    this.details = details;
   }
 }
 
-const API_BASE = "/api";
+export type GetToken = () => Promise<string | null>;
 
-async function request<T>(
-  url: string,
-  init?: RequestInit,
+export async function apiRequest<T>(
+  path: string,
+  opts: {
+    method?: "GET" | "POST" | "PATCH" | "DELETE";
+    body?: unknown;
+    getToken: GetToken;
+  }
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}${url}`, {
-    credentials: "include",
+  const token = await opts.getToken();
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: opts.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    ...init,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    credentials: "include",
   });
 
-  let body: unknown = null;
-
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-
-  if (!response.ok) {
+  if (!res.ok) {
+    let payload: { error?: string; message?: string; details?: unknown } | undefined;
+    try {
+      payload = await res.json();
+    } catch {
+      // non-JSON error body — fall back to statusText
+    }
     throw new ApiError(
-      response.statusText,
-      response.status,
-      body,
+      res.status,
+      payload?.message ?? payload?.error ?? res.statusText,
+      payload?.details
     );
   }
 
-  return body as T;
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
-
-export const apiClient = {
-  //
-  // TASKS
-  //
-
-listTasks(status?: TaskStatus) {
-  const query = status
-    ? `?status=${encodeURIComponent(status)}`
-    : "";
-
-  return request<Task[]>(`/tasks${query}`);
-},
-
-  getTask(id: string | number) {
-    return request<Task>(`/tasks/${id}`);
-  },
-
-  createTask(data: TaskCreateInput) {
-    return request<Task>("/tasks", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  updateTask(
-    id: string | number,
-    data: TaskUpdateInput,
-  ) {
-    return request<Task>(`/tasks/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-  },
-
-  deleteTask(id: string | number) {
-    return request<void>(`/tasks/${id}`, {
-      method: "DELETE",
-    });
-  },
-
-  //
-  // TASK STATS
-  //
-
-  getTaskStats() {
-    return request<TaskStats>("/tasks/stats");
-  },
-
-  //
-  // USER
-  //
-
-  getUserProfile() {
-    return request<UserProfile>("/users/profile");
-  },
-
-  //
-  // STRIPE
-  //
-
-  createCheckoutSession() {
-    return request<CheckoutSession>(
-      "/billing/create-checkout-session",
-      {
-        method: "POST",
-      },
-    );
-  },
-};

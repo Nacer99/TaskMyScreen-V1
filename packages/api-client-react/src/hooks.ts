@@ -1,250 +1,182 @@
-import type { TaskStatus } from "./queryKeys";
-
+import { useAuth } from "@clerk/react";
 import {
-  useQuery,
   useMutation,
+  useQuery,
   type UseMutationOptions,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-
-import { apiClient } from "./client";
-
-import type {
-  Task,
-  TaskCreateInput,
-  TaskUpdateInput,
-  TaskStats,
-  UserProfile,
-  CheckoutSession,
-} from "./types";
-
+import { apiRequest, type GetToken } from "./client";
 import {
-  getListTasksQueryKey,
   getGetTaskQueryKey,
   getGetTaskStatsQueryKey,
   getGetUserProfileQueryKey,
+  getListTasksQueryKey,
+  type TaskListStatus,
 } from "./queryKeys";
+import {
+  mapTask,
+  toApiTaskPayload,
+  type ApiTask,
+  type CaptureResult,
+  type CheckoutSession,
+  type PriceType,
+  type Task,
+  type TaskCreateInput,
+  type TaskStats,
+  type TaskUpdateInput,
+  type UserProfile,
+} from "./types";
 
-/* ============================================================
-   TASKS
-============================================================ */
+function useGetToken(): GetToken {
+  const { getToken } = useAuth();
+  return () => getToken();
+}
+
+type QueryOpts<T> = { query?: Partial<UseQueryOptions<T>> };
+type MutationOpts<TData, TVars> = { mutation?: Partial<UseMutationOptions<TData, unknown, TVars>> };
+
+// ─── Tasks: list / detail / stats ──────────────────────────────────────────
 
 export function useListTasks(
-  params?: {
-    status?: TaskStatus;
-  },
-  options?: {
-    query?: Omit<
-      UseQueryOptions<
-        Task[],
-        Error,
-        Task[],
-        ReturnType<typeof getListTasksQueryKey>
-      >,
-      "queryKey" | "queryFn"
-    >;
-  },
+  params?: { status?: TaskListStatus },
+  options?: QueryOpts<Task[]>
 ) {
-  return useQuery({
+  const getToken = useGetToken();
+  const status = params?.status ?? "all";
+  return useQuery<Task[]>({
     queryKey: getListTasksQueryKey(params),
-
-    queryFn: () => apiClient.listTasks(params?.status),
-
+    queryFn: async () => {
+      const all = await apiRequest<ApiTask[]>("/tasks", { getToken });
+      const mapped = all.map(mapTask);
+      if (status === "all") return mapped;
+      return mapped.filter((t) => (status === "completed" ? t.completed : !t.completed));
+    },
     ...options?.query,
   });
 }
 
-export function useGetTask(
-  id: string | number,
-  options?: {
-    query?: Omit<
-      UseQueryOptions<
-        Task,
-        Error,
-        Task,
-        ReturnType<typeof getGetTaskQueryKey>
-      >,
-      "queryKey" | "queryFn"
-    >;
-  },
-) {
-  return useQuery({
+export function useGetTask(id: string, options?: QueryOpts<Task>) {
+  const getToken = useGetToken();
+  return useQuery<Task>({
     queryKey: getGetTaskQueryKey(id),
-
-    queryFn: () => apiClient.getTask(id),
-
-    enabled: !!id,
-
+    queryFn: async () => mapTask(await apiRequest<ApiTask>(`/tasks/${id}`, { getToken })),
     ...options?.query,
   });
 }
 
-/* ============================================================
-   CREATE
-============================================================ */
+export function useGetTaskStats(options?: QueryOpts<TaskStats>) {
+  const getToken = useGetToken();
+  return useQuery<TaskStats>({
+    queryKey: getGetTaskStatsQueryKey(),
+    queryFn: () => apiRequest<TaskStats>("/tasks/stats", { getToken }),
+    ...options?.query,
+  });
+}
 
-export function useCreateTask(
-  options?: {
-    mutation?: UseMutationOptions<
-      Task,
-      Error,
-      {
-        data: TaskCreateInput;
-      }
-    >;
-  },
-) {
-  return useMutation({
-    mutationFn: ({ data }) =>
-      apiClient.createTask(data),
+export function useGetUserProfile(options?: QueryOpts<UserProfile>) {
+  const getToken = useGetToken();
+  return useQuery<UserProfile>({
+    queryKey: getGetUserProfileQueryKey(),
+    queryFn: () => apiRequest<UserProfile>("/users/profile", { getToken }),
+    ...options?.query,
+  });
+}
 
+// ─── Tasks: mutations ───────────────────────────────────────────────────────
+
+export function useCreateTask(options?: MutationOpts<Task, { data: TaskCreateInput }>) {
+  const getToken = useGetToken();
+  return useMutation<Task, unknown, { data: TaskCreateInput }>({
+    mutationFn: async ({ data }) =>
+      mapTask(
+        await apiRequest<ApiTask>("/tasks", {
+          method: "POST",
+          body: toApiTaskPayload(data),
+          getToken,
+        })
+      ),
     ...options?.mutation,
   });
 }
-
-/* ============================================================
-   UPDATE
-============================================================ */
 
 export function useUpdateTask(
-  options?: {
-    mutation?: UseMutationOptions<
-      Task,
-      Error,
-      {
-        id: string | number;
-        data: TaskUpdateInput;
-      }
-    >;
-  },
+  options?: MutationOpts<Task, { id: string; data: TaskUpdateInput }>
 ) {
-  return useMutation({
-    mutationFn: ({ id, data }) =>
-      apiClient.updateTask(id, data),
-
+  const getToken = useGetToken();
+  return useMutation<Task, unknown, { id: string; data: TaskUpdateInput }>({
+    mutationFn: async ({ id, data }) =>
+      mapTask(
+        await apiRequest<ApiTask>(`/tasks/${id}`, {
+          method: "PATCH",
+          body: toApiTaskPayload(data),
+          getToken,
+        })
+      ),
     ...options?.mutation,
   });
 }
-
-/* ============================================================
-   COMPLETE
-============================================================ */
 
 export function useCompleteTask(
-  options?: {
-    mutation?: UseMutationOptions<
-      Task,
-      Error,
-      {
-        id: string | number;
-      }
-    >;
-  },
+  options?: MutationOpts<Task, { id: string; data: { completed: boolean } }>
 ) {
-  return useMutation({
-    mutationFn: ({ id }) =>
-      apiClient.updateTask(id, {
-        isCompleted: true,
-      } as TaskUpdateInput),
-
+  const getToken = useGetToken();
+  return useMutation<Task, unknown, { id: string; data: { completed: boolean } }>({
+    mutationFn: async ({ id, data }) =>
+      mapTask(
+        await apiRequest<ApiTask>(`/tasks/${id}`, {
+          method: "PATCH",
+          body: { isCompleted: data.completed },
+          getToken,
+        })
+      ),
     ...options?.mutation,
   });
 }
 
-/* ============================================================
-   DELETE
-============================================================ */
-
-export function useDeleteTask(
-  options?: {
-    mutation?: UseMutationOptions<
-      void,
-      Error,
-      {
-        id: string | number;
-      }
-    >;
-  },
-) {
-  return useMutation({
-    mutationFn: ({ id }) =>
-      apiClient.deleteTask(id),
-
+export function useDeleteTask(options?: MutationOpts<void, { id: string }>) {
+  const getToken = useGetToken();
+  return useMutation<void, unknown, { id: string }>({
+    mutationFn: async ({ id }) => {
+      await apiRequest<void>(`/tasks/${id}`, { method: "DELETE", getToken });
+    },
     ...options?.mutation,
   });
 }
 
-/* ============================================================
-   TASK STATS
-============================================================ */
-
-export function useGetTaskStats(
-  options?: {
-    query?: Omit<
-      UseQueryOptions<
-        TaskStats,
-        Error,
-        TaskStats,
-        ReturnType<typeof getGetTaskStatsQueryKey>
-      >,
-      "queryKey" | "queryFn"
-    >;
-  },
-) {
-  return useQuery({
-    queryKey: getGetTaskStatsQueryKey(),
-
-    queryFn: () =>
-      apiClient.getTaskStats(),
-
-    ...options?.query,
-  });
-}
-
-/* ============================================================
-   USER PROFILE
-============================================================ */
-
-export function useGetUserProfile(
-  options?: {
-    query?: Omit<
-      UseQueryOptions<
-        UserProfile,
-        Error,
-        UserProfile,
-        ReturnType<typeof getGetUserProfileQueryKey>
-      >,
-      "queryKey" | "queryFn"
-    >;
-  },
-) {
-  return useQuery({
-    queryKey: getGetUserProfileQueryKey(),
-
-    queryFn: () =>
-      apiClient.getUserProfile(),
-
-    ...options?.query,
-  });
-}
-
-/* ============================================================
-   BILLING
-============================================================ */
+// ─── Billing ────────────────────────────────────────────────────────────────
 
 export function useCreateCheckoutSession(
-  options?: {
-    mutation?: UseMutationOptions<
-      CheckoutSession,
-      Error,
-      void
-    >;
-  },
+  options?: MutationOpts<CheckoutSession, { data: { priceType: PriceType } }>
 ) {
-  return useMutation({
-    mutationFn: () =>
-      apiClient.createCheckoutSession(),
+  const getToken = useGetToken();
+  return useMutation<CheckoutSession, unknown, { data: { priceType: PriceType } }>({
+    mutationFn: ({ data }) =>
+      apiRequest<CheckoutSession>("/billing/checkout", {
+        method: "POST",
+        body: data,
+        getToken,
+      }),
+    ...options?.mutation,
+  });
+}
 
+/**
+ * Confirms a payment server-side after the payment provider (PayPal)
+ * redirects the user back to the app. The frontend never marks a user as
+ * Pro/Lifetime on its own — only this call, backed by the backend's
+ * verified capture, can do that (see routes/billing.ts POST /capture).
+ */
+export function useCaptureCheckout(
+  options?: MutationOpts<CaptureResult, { orderId: string }>
+) {
+  const getToken = useGetToken();
+  return useMutation<CaptureResult, unknown, { orderId: string }>({
+    mutationFn: ({ orderId }) =>
+      apiRequest<CaptureResult>("/billing/capture", {
+        method: "POST",
+        body: { orderId },
+        getToken,
+      }),
     ...options?.mutation,
   });
 }

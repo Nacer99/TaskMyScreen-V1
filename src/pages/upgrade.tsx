@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Zap, Lock } from "lucide-react";
+import { ArrowLeft, Check, Zap, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCreateCheckoutSession, getGetUserProfileQueryKey } from "@workspace/api-client-react";
+import {
+  useCreateCheckoutSession,
+  useCaptureCheckout,
+  getGetUserProfileQueryKey,
+} from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePlan } from "@/hooks/use-plan";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,13 +58,33 @@ export default function Upgrade() {
   const { isPro, plan } = usePlan();
   const [loadingPlan, setLoadingPlan] = useState<PriceType | null>(null);
 
-  const isSuccess = new URLSearchParams(search).get("upgrade") === "success";
+  // PayPal redirects back with ?token=<orderId>&PayerID=... after approval —
+  // capture is a server-verified call; the frontend never assumes success
+  // from the mere presence of a return URL.
+  const params = new URLSearchParams(search);
+  const paypalOrderId = params.get("token");
+  const [captureState, setCaptureState] = useState<"idle" | "pending" | "success" | "error">(
+    paypalOrderId ? "pending" : "idle"
+  );
+
+  const captureMutation = useCaptureCheckout({
+    mutation: {
+      onSuccess: () => {
+        setCaptureState("success");
+        queryClient.invalidateQueries({ queryKey: getGetUserProfileQueryKey() });
+      },
+      onError: () => setCaptureState("error"),
+    },
+  });
 
   useEffect(() => {
-    if (isSuccess) {
-      queryClient.invalidateQueries({ queryKey: getGetUserProfileQueryKey() });
+    if (paypalOrderId && captureState === "pending" && !captureMutation.isPending) {
+      captureMutation.mutate({ orderId: paypalOrderId });
     }
-  }, [isSuccess, queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paypalOrderId]);
+
+  const isSuccess = captureState === "success";
 
   const checkoutMutation = useCreateCheckoutSession({
     mutation: {
@@ -73,7 +97,7 @@ export default function Upgrade() {
         setLoadingPlan(null);
         toast({
           title: "Checkout unavailable",
-          description: "Stripe is not yet configured. Please try again later.",
+          description: "PayPal is not yet configured. Please try again later.",
           variant: "destructive",
         });
       },
@@ -105,7 +129,23 @@ export default function Upgrade() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 pb-12 space-y-5">
-        {/* Success banner */}
+        {/* Payment confirmation banner */}
+        {captureState === "pending" && (
+          <div className="flex items-center justify-center gap-2 p-4 rounded-xl bg-secondary/50 border border-border/50 text-center text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Confirming your payment with PayPal…
+          </div>
+        )}
+
+        {captureState === "error" && (
+          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-center">
+            <p className="text-destructive font-semibold">We couldn't confirm your payment.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              If PayPal charged you, contact support — no charge is applied without a plan change.
+            </p>
+          </div>
+        )}
+
         {isSuccess && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

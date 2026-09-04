@@ -1,174 +1,31 @@
 import { z } from "zod";
 
-/* -------------------------------------------------------------------------- */
-/*                                  PLAN TYPE                                 */
-/* -------------------------------------------------------------------------- */
-
-export const planTypeSchema = z.enum([
-  "free",
-  "pro",
-  "lifetime",
-]);
-
-export type PlanType = z.infer<
-  typeof planTypeSchema
->;
-
-/* -------------------------------------------------------------------------- */
-/*                                    TASK                                    */
-/* -------------------------------------------------------------------------- */
-
-export const taskSchema = z.object({
-  id: z.string(),
-
-  userId: z.string(),
-
-  title: z.string().min(1),
-
-  description: z.string().nullable(),
-
-  imageUrl: z.string().nullable(),
-
-  dueAt: z.string().datetime(),
-
-  completed: z.boolean(),
-
-  scheduled: z.boolean(),
-
-  createdAt: z.string().datetime(),
-});
-
-export type Task = z.infer<
-  typeof taskSchema
->;
-
-/* -------------------------------------------------------------------------- */
-/*                              CREATE TASK                                   */
-/* -------------------------------------------------------------------------- */
-
+// Validation pour la création et la mise à jour d'une tâche
 export const taskCreateSchema = z.object({
-  title: z.string().min(
-    1,
-    "Title is required",
-  ),
-
-  description: z
-    .string()
-    .optional(),
-
-  imageUrl: z
-    .string()
-    .optional(),
-
-  dueAt: z.string().datetime(
-    "Invalid due date",
-  ),
-
-  scheduled: z
-    .boolean()
-    .optional()
-    .default(true),
+  title: z.string().min(1, "Le titre est requis").max(150, "150 caractères maximum"),
+  description: z.string().max(2000, "2000 caractères maximum").optional(),
+  // Accepts absolute URLs as well as the relative object-storage paths returned
+  // by POST /api/storage/upload (e.g. "/tasks/<uuid>.jpg") — not restricted to
+  // z.string().url() since the app never stores third-party absolute URLs.
+  imageUrl: z.string().min(1).optional().nullable(),
+  reminderTime: z.string().datetime("La date de rappel doit être un format ISO valide"),
 });
 
-export type TaskCreateInput = z.infer<
-  typeof taskCreateSchema
->;
+export const taskUpdateSchema = taskCreateSchema.partial().extend({
+  isCompleted: z.boolean().optional(),
+});
 
-/* -------------------------------------------------------------------------- */
-/*                              UPDATE TASK                                   */
-/* -------------------------------------------------------------------------- */
+// Validation pour l'utilisateur
+export const userSyncSchema = z.object({
+  id: z.string().min(1),
+  email: z.string().email("Email invalide"),
+});
 
-export const taskUpdateSchema =
-  z.object({
-    title: z
-      .string()
-      .min(1)
-      .optional(),
+export const checkoutSchema = z.object({
+  priceType: z.enum(["monthly", "annual", "lifetime"]),
+});
 
-    description: z
-      .string()
-      .nullable()
-      .optional(),
-
-    imageUrl: z
-      .string()
-      .nullable()
-      .optional(),
-
-    dueAt: z
-      .string()
-      .datetime("Invalid due date")
-      .optional(),
-
-    scheduled: z
-      .boolean()
-      .optional(),
-
-    completed: z
-      .boolean()
-      .optional(),
-  });
-
-export type TaskUpdateInput = z.infer<
-  typeof taskUpdateSchema
->;
-
-/* -------------------------------------------------------------------------- */
-/*                                 TASK STATS                                 */
-/* -------------------------------------------------------------------------- */
-
-export const taskStatsSchema =
-  z.object({
-    total: z.number(),
-
-    pending: z.number(),
-
-    completed: z.number(),
-
-    overdue: z.number(),
-
-    plan: planTypeSchema,
-
-    monthlyTasksUsed: z.number(),
-
-    monthlyLimit: z.number(),
-  });
-
-export type TaskStats = z.infer<
-  typeof taskStatsSchema
->;
-
-/* -------------------------------------------------------------------------- */
-/*                                USER PROFILE                                */
-/* -------------------------------------------------------------------------- */
-
-export const userProfileSchema =
-  z.object({
-    id: z.string(),
-
-    email: z.string(),
-
-    plan: planTypeSchema,
-
-    monthlyTasksUsed: z.number(),
-
-    monthlyLimit: z.number(),
-  });
-
-export type UserProfile = z.infer<
-  typeof userProfileSchema
->;
-
-/* -------------------------------------------------------------------------- */
-/*                              STRIPE CHECKOUT                               */
-/* -------------------------------------------------------------------------- */
-
-export const checkoutSessionSchema =
-  z.object({
-    url: z.string().url(),
-  });
-
-export type CheckoutSession =
-  z.infer<
-    typeof checkoutSessionSchema
-  >;
+export type TaskCreateInput = z.infer<typeof taskCreateSchema>;
+export type TaskUpdateInput = z.infer<typeof taskUpdateSchema>;
+export type UserSyncInput = z.infer<typeof userSyncSchema>;
+export type CheckoutInput = z.infer<typeof checkoutSchema>;

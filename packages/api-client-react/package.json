@@ -3,12 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "dependencies": {
-    "@tanstack/react-query": "^5",
-    "@workspace/api-zod": "workspace:*",
-    "zod": "catalog:"
+    "@clerk/react": "^6.7.2",
+    "@tanstack/react-query": "latest"
+  },
+  "peerDependencies": {
+    "react": "*"
   }
 }
