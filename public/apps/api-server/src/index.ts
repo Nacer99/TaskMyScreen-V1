@@ -21,7 +21,27 @@ const logger = pino({
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: true, credentials: true }));
+// Reflecting any Origin while allowing credentials (the previous
+// `origin: true`) lets ANY third-party site make authenticated requests
+// using a signed-in user's session — restrict to the app's own origin(s).
+const allowedOrigins = (process.env.APP_URL || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Same-origin/non-browser requests (curl, server-to-server) send no
+      // Origin header at all — allow those through.
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(pinoHttp({ logger }));
 app.use(clerkMiddleware());

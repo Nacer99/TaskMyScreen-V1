@@ -1,6 +1,8 @@
 import {
   getActionsForPlan,
+  MAX_SNOOZE_COUNT,
   NOTIFICATION_VERSION,
+  SNOOZE_DELAY_MS,
 } from "./constants";
 
 import {
@@ -169,6 +171,68 @@ export function cancelTask(
   scheduler.cancelByTaskId(
     taskId,
   );
+}
+
+/**
+ * Pushes a notification's dueAt forward by SNOOZE_DELAY_MS and reschedules
+ * its timer. Free plan cannot snooze (enforced by getActionsForPlan not
+ * offering the button, and again here since a message can't be trusted to
+ * only ever arrive from an entitled client). Returns null if the task has no
+ * notification, is not snoozable (free plan or MAX_SNOOZE_COUNT reached), or
+ * has already fired/been cancelled.
+ *
+ * NOT WIRED TO ANY UI AT LAUNCH — Snooze is deliberately deferred pending
+ * real user feedback (product decision). This function is kept, tested, and
+ * exported so re-enabling the feature later is: (1) add the button back to
+ * PRO_ACTIONS in constants.ts, (2) restore the ACTION_SNOOZE case in
+ * public/sw.js, (3) restore the TASK_SNOOZE handler in use-sw-messages.ts —
+ * no changes needed here.
+ */
+export function snoozeTask(
+  taskId: string | number,
+): NotificationTask | null {
+  const notification =
+    notificationStorage.findByTaskId(
+      taskId,
+    );
+
+  if (!notification) {
+    return null;
+  }
+
+  if (notification.plan === "free") {
+    return null;
+  }
+
+  if (
+    notification.snoozeCount >=
+    MAX_SNOOZE_COUNT
+  ) {
+    return null;
+  }
+
+  if (
+    notification.status === "completed" ||
+    notification.status === "cancelled" ||
+    notification.status === "dismissed"
+  ) {
+    return null;
+  }
+
+  const timestamp = now();
+
+  notification.dueAt = new Date(
+    Date.now() + SNOOZE_DELAY_MS,
+  ).toISOString();
+
+  notification.snoozeCount += 1;
+  notification.updatedAt = timestamp;
+
+  scheduler.schedule(
+    notification,
+  );
+
+  return notification;
 }
 
 export function restoreNotifications(): void {

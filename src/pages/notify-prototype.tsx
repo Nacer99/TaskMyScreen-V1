@@ -3,15 +3,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, BellOff, CheckCircle2, Clock, Trash2, BellRing, ImageIcon, AlarmClock, ShieldCheck, Info } from "lucide-react";
 import {
   requestPermission,
-  getPermissionStatus,
-  scheduleTestNotification,
-  scheduleNotification,
-  cancelNotification,
-  getPendingNotifications,
-  initServiceWorker,
-  restorePendingNotifications,
-  type ScheduledNotification,
+  getPermission,
+  scheduleTask,
+  cancel,
+  getAllNotifications,
+  registerServiceWorker,
+  restoreNotifications,
+  type NotificationTask,
 } from "@/lib/notifications";
+
+/** Active (not yet fired/cancelled) notifications — mirrors the old flat API's getPendingNotifications(). */
+function getActiveNotifications(): NotificationTask[] {
+  return getAllNotifications().filter(
+    (n) => n.status === "pending" || n.status === "scheduled"
+  );
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -89,7 +95,7 @@ function ScheduledCard({
   onCancel,
   tick: _tick,
 }: {
-  notif: ScheduledNotification;
+  notif: NotificationTask;
   onCancel: (id: string) => void;
   /** Unused directly — forces this card to re-render each second so the countdown updates. */
   tick: number;
@@ -138,9 +144,9 @@ function ScheduledCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function NotifyPrototype() {
-  const [permission, setPermission] = useState<NotificationPermission>(getPermissionStatus());
+  const [permission, setPermission] = useState<NotificationPermission>(getPermission());
   const [swReady, setSwReady] = useState(false);
-  const [pending, setPending] = useState<ScheduledNotification[]>(getPendingNotifications());
+  const [pending, setPending] = useState<NotificationTask[]>(getActiveNotifications());
   const [tick, setTick] = useState(0);
 
   // Form state
@@ -154,15 +160,16 @@ export default function NotifyPrototype() {
 
   // Init SW and restore pending notifications on mount
   useEffect(() => {
-    initServiceWorker().then((ok) => {
+    registerServiceWorker().then((registration) => {
+      const ok = !!registration;
       setSwReady(ok);
-      if (ok) restorePendingNotifications();
+      if (ok) restoreNotifications();
     });
 
     // Tick every second to update countdowns
     const interval = setInterval(() => {
       setTick((t) => t + 1);
-      setPending(getPendingNotifications());
+      setPending(getActiveNotifications());
     }, 1000);
 
     // Listen for SW messages
@@ -192,14 +199,17 @@ export default function NotifyPrototype() {
         if (result !== "granted") return;
       }
 
-      scheduleTestNotification(
-        title || "TaskMyScreen Reminder",
-        body || "Your task is due. Tap to open.",
-        seconds,
-        imageUrl || undefined
-      );
+      const due = new Date(Date.now() + seconds * 1000);
+      scheduleTask({
+        taskId: `test-${Date.now()}`,
+        title: title || "TaskMyScreen Reminder",
+        body: body || "Your task is due. Tap to open.",
+        dueAt: due.toISOString(),
+        imageUrl: imageUrl || undefined,
+        plan: "free",
+      });
 
-      setPending(getPendingNotifications());
+      setPending(getActiveNotifications());
       setLastFired(null);
     },
     [permission, title, body, imageUrl]
@@ -223,20 +233,21 @@ export default function NotifyPrototype() {
       due.setDate(due.getDate() + 1);
     }
 
-    scheduleNotification({
+    scheduleTask({
       taskId: `test-${Date.now()}`,
       title: title || "TaskMyScreen Reminder",
       body: body || "Your task is due. Tap to open.",
       imageUrl: imageUrl || undefined,
       dueAt: due.toISOString(),
+      plan: "free",
     });
 
-    setPending(getPendingNotifications());
+    setPending(getActiveNotifications());
   }, [customTime, permission, title, body, imageUrl]);
 
   const handleCancel = useCallback((id: string) => {
-    cancelNotification(id);
-    setPending(getPendingNotifications());
+    cancel(id);
+    setPending(getActiveNotifications());
   }, []);
 
   return (
@@ -267,7 +278,7 @@ export default function NotifyPrototype() {
         <div className="mb-5 flex gap-3 rounded-xl border border-[#21262d] bg-[#161b22] px-4 py-3">
           <Info className="h-4 w-4 shrink-0 text-[#8b949e] mt-0.5" />
           <p className="text-xs leading-relaxed text-[#8b949e]">
-            Notifications are delivered via <strong className="text-[#e6edf3]">Service Worker</strong> — they fire with your custom icon, large image, and action buttons (<strong className="text-[#e6edf3]">Mark Done</strong> / <strong className="text-[#e6edf3]">Snooze 10 min</strong>) even when this tab is in the background.
+            Notifications are delivered via <strong className="text-[#e6edf3]">Service Worker</strong> — they fire with your custom icon, large image, and action buttons (<strong className="text-[#e6edf3]">Mark Done</strong> / <strong className="text-[#e6edf3]">Reschedule</strong>) even when this tab is in the background.
           </p>
         </div>
 
@@ -451,7 +462,7 @@ export default function NotifyPrototype() {
             {pending.length > 0 && (
               <button
                 onClick={() => {
-                  pending.forEach((n) => cancelNotification(n.id));
+                  pending.forEach((n) => cancel(n.id));
                   setPending([]);
                 }}
                 className="text-xs text-[#F85149] hover:underline"
@@ -488,7 +499,7 @@ export default function NotifyPrototype() {
               "TaskMyScreen branded icon in the notification",
               "Custom title and body text",
               "Large image (if URL provided)",
-              'Two action buttons: "Mark Done" and "Snooze 10 min"',
+              'Two action buttons: "Mark Done" and "Reschedule"',
               "Custom vibration pattern on arrival",
               "Fires even when tab is in background",
               "Tapping opens the app",

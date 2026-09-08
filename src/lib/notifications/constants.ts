@@ -30,6 +30,10 @@ export const NOTIFICATION_BADGE =
  */
 export const NOTIFICATION_VERSION = 1;
 
+// Snooze is deliberately not offered at launch (see engine.ts's snoozeTask
+// doc comment) — these two constants stay defined, unused by
+// getActionsForPlan below, so re-enabling later is a one-line change rather
+// than rebuilding the feature.
 export const MAX_SNOOZE_COUNT = 3;
 
 export const SNOOZE_DELAY_MS =
@@ -102,10 +106,9 @@ export const PRO_ACTIONS: NotificationActionButton[] =
       action: ACTION_RESCHEDULE,
       title: LABEL_RESCHEDULE,
     },
-    {
-      action: ACTION_SNOOZE_15,
-      title: LABEL_SNOOZE,
-    },
+    // Snooze intentionally omitted at launch — see engine.ts's snoozeTask
+    // doc comment. Re-add `{ action: ACTION_SNOOZE_15, title: LABEL_SNOOZE }`
+    // here to bring it back.
   ];
 
 /**

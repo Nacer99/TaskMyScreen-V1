@@ -27,7 +27,7 @@ import {
   getGetUserProfileQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { scheduleNotification, cancelNotificationByTaskId } from "@/lib/notifications";
+import { scheduleTask, cancelTask } from "@/lib/notifications";
 import { useUpload } from "@workspace/object-storage-web";
 import { usePlan } from "@/hooks/use-plan";
 
@@ -104,7 +104,7 @@ export default function TaskForm() {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { isPro } = usePlan();
+  const { isPro, plan } = usePlan();
 
   // Image state — managed outside the form
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -211,13 +211,13 @@ export default function TaskForm() {
         queryClient.invalidateQueries({ queryKey: getGetTaskStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetUserProfileQueryKey() });
         if (data.dueAt) {
-          scheduleNotification({
+          scheduleTask({
             taskId: data.id,
             title: data.title,
             body: data.description ?? "Your task is due now.",
             imageUrl: data.imageUrl ?? undefined,
             dueAt: data.dueAt,
-            isPro,
+            plan,
           });
         }
         toast({ title: "Task created" });
@@ -238,15 +238,15 @@ export default function TaskForm() {
     mutation: {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-        cancelNotificationByTaskId(data.id);
+        cancelTask(data.id);
         if (data.dueAt) {
-          scheduleNotification({
+          scheduleTask({
             taskId: data.id,
             title: data.title,
             body: data.description ?? "Your task is due now.",
             imageUrl: data.imageUrl ?? undefined,
             dueAt: data.dueAt,
-            isPro,
+            plan,
           });
         }
         toast({ title: "Task updated" });
@@ -262,7 +262,7 @@ export default function TaskForm() {
         queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetTaskStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetUserProfileQueryKey() });
-        cancelNotificationByTaskId(taskId);
+        cancelTask(taskId);
         toast({ title: "Task deleted" });
         setLocation("/tasks");
       },

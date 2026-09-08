@@ -1,11 +1,8 @@
-import { useAuth } from "@clerk/react";
-import { useGetUserProfile, getGetUserProfileQueryKey } from "@workspace/api-client-react";
+import { useGetUserProfile } from "@workspace/api-client-react";
 
 export const MONTHLY_LIMIT = 20;
 
 export function usePlan() {
-  const { isSignedIn } = useAuth();
-
   const { data: profile, isLoading } = useGetUserProfile({
     query: {}
   });

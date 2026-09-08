@@ -8,7 +8,7 @@ import { useCompleteTask } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListTasksQueryKey, getGetTaskStatsQueryKey } from "@workspace/api-client-react";
-import { cancelNotificationByTaskId } from "@/lib/notifications";
+import { cancelTask } from "@/lib/notifications";
 
 interface TaskCardProps {
   task: Task;
@@ -34,7 +34,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetTaskStatsQueryKey() });
-        if (data.completed) cancelNotificationByTaskId(task.id);
+        if (data.completed) cancelTask(task.id);
         if (onStatusChange) onStatusChange();
       },
       onError: () => {

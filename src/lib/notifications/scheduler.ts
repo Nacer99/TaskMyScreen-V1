@@ -18,6 +18,21 @@ const timers = new Map<
 function scheduleTimer(
   notification: NotificationTask,
 ): void {
+  // Idempotency guard: without this, calling schedule()/restore() twice for
+  // the same notification id (e.g. main.tsx's boot-time restore plus a
+  // client-side navigation to /notify-test re-running its own restore in the
+  // same session) leaks the old setTimeout and leads to the SAME
+  // notification firing twice — visibly, since renderer.ts sets
+  // `renotify: true` so the OS does not silently dedupe by tag.
+  const existingTimer =
+    timers.get(notification.id);
+
+  if (existingTimer !== undefined) {
+    window.clearTimeout(
+      existingTimer,
+    );
+  }
+
   const due =
     new Date(
       notification.dueAt,

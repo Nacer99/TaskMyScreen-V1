@@ -7,10 +7,6 @@ export const usersTable = pgTable("users", {
 
   tier: text("tier").default("free").notNull(),
 
-  monthlyTasksUsed: integer("monthly_tasks_used")
-    .default(0)
-    .notNull(),
-
   createdAt: timestamp("created_at")
     .defaultNow()
     .notNull(),

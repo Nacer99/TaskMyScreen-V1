@@ -15,7 +15,7 @@ import {
   getGetTaskStatsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { cancelNotificationByTaskId } from "@/lib/notifications";
+import { cancelTask } from "@/lib/notifications";
 
 export function useSwMessages() {
   const [, setLocation] = useLocation();
@@ -50,7 +50,7 @@ export function useSwMessages() {
             { id, data: { completed: true } },
             {
               onSuccess: () => {
-                cancelNotificationByTaskId(id);
+                cancelTask(id);
                 queryClientRef.current.invalidateQueries({
                   queryKey: getListTasksQueryKey(),
                 });
@@ -69,6 +69,10 @@ export function useSwMessages() {
           if (msg.taskId)
             setLocationRef.current(`/tasks/${msg.taskId}/edit?reschedule=1`);
           break;
+        // TASK_SNOOZE intentionally not handled — Snooze is deferred at
+        // launch and public/sw.js no longer posts this message (see its
+        // notificationclick handler). Restore both sides together if
+        // Snooze is re-enabled.
       }
     };
 

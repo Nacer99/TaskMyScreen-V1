@@ -4,9 +4,26 @@ import { Storage } from "@google-cloud/storage";
 import { getAuth } from "@clerk/express";
 
 const router = Router();
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB — matches free-tier compression target
+  // Raster images only. Deliberately NOT "image/*" — image/svg+xml is XML and
+  // can embed <script>, making it a stored-XSS vector when served back from
+  // our own origin (see GET route below).
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("UNSUPPORTED_FILE_TYPE"));
+    }
+  },
 });
 
 const gcs = new Storage();
@@ -16,7 +33,16 @@ const BUCKET_NAME = process.env.GCS_BUCKET_NAME || "";
 // returns its object path (not a full URL). The frontend prefixes this with
 // `/api/storage` and requests it back through GET /api/storage/:path below,
 // which keeps the bucket private and ownership-scoped rather than public-read.
-router.post("/upload", upload.single("file"), async (req, res) => {
+router.post("/upload", (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      const status = err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+      res.status(status).json({ success: false, code: "VALIDATION_ERROR", message: "Fichier invalide ou trop volumineux" });
+      return;
+    }
+    next();
+  });
+}, async (req, res) => {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ success: false, code: "UNAUTHENTICATED", message: "Non autorisé" });
@@ -76,6 +102,7 @@ router.get("/:userId/:filename", async (req, res) => {
     }
     const [metadata] = await gcsFile.getMetadata();
     if (metadata.contentType) res.setHeader("Content-Type", metadata.contentType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
     gcsFile.createReadStream().pipe(res);
   } catch (error) {
     res.status(500).json({ success: false, code: "INTERNAL_ERROR", message: "Échec de la lecture du fichier" });

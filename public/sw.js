@@ -300,7 +300,9 @@ self.addEventListener("notificationclick", (event) => {
 
         case ACTION_RESCHEDULE:
 
-          if (data.plan !== "pro") {
+          // Lifetime has the same capabilities as Pro — must not be
+          // excluded here just because it isn't literally "pro".
+          if (data.plan !== "pro" && data.plan !== "lifetime") {
 
             await focusExistingWindow(TASKS_URL);
 
@@ -326,27 +328,11 @@ self.addEventListener("notificationclick", (event) => {
 
           break;
 
-        case ACTION_SNOOZE:
-
-          if (data.plan !== "pro") {
-
-            break;
-
-          }
-
-          await broadcast({
-
-            type: MESSAGE_TYPES.TASK_SNOOZE,
-
-            taskId: data.taskId,
-
-            notificationId: data.notificationId,
-
-            minutes: 15,
-
-          });
-
-          break;
+        // Snooze deliberately deferred at launch (product decision) — no
+        // notification action button offers it anymore (see constants.ts
+        // PRO_ACTIONS), so this case is intentionally not handled here; an
+        // unknown action falls through to `default` below, which safely
+        // just opens the app. Restore this case if Snooze is re-enabled.
 
         default:
 

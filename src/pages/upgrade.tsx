@@ -46,7 +46,7 @@ const PLANS = [
 
 const FEATURE_COMPARISON = [
   { free: "20 tasks / month", pro: "Unlimited tasks" },
-  { free: "Fixed-time reminders only", pro: "Snooze & reschedule from alerts" },
+  { free: "Fixed-time reminders only", pro: "Reschedule from alerts" },
   { free: "Compressed images", pro: "Full-resolution images" },
 ];
 
