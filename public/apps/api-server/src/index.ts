@@ -24,7 +24,7 @@ app.use(express.json());
 // Reflecting any Origin while allowing credentials (the previous
 // `origin: true`) lets ANY third-party site make authenticated requests
 // using a signed-in user's session — restrict to the app's own origin(s).
-const allowedOrigins = (process.env.APP_URL || "http://localhost:5173")
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .split(",")
   .map((o) => o.trim());
 
@@ -44,6 +44,13 @@ app.use(
 );
 app.use(cookieParser());
 app.use(pinoHttp({ logger }));
+
+// Enregistré avant clerkMiddleware() : c'est une sonde de liveness pure,
+// elle ne doit jamais dépendre des secrets Clerk pour répondre.
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use(clerkMiddleware());
 
 // Enregistrement des routeurs
@@ -87,11 +94,6 @@ app.post("/api/webhooks/paypal", async (req, res) => {
     logger.error(`❌ Erreur webhook PayPal: ${(err as Error).message}`);
     res.status(500).json({ received: false });
   }
-});
-
-// --- ROUTES API DE BASE ---
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 const PORT = process.env.PORT || 5000;
