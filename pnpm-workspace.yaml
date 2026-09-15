@@ -9,3 +9,7 @@ catalog:
 allowBuilds:
   '@clerk/shared': true
   esbuild: true
+
+overrides:
+  react: "19.2.8"
+  react-dom: "19.2.8"
