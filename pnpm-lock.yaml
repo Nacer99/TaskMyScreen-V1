@@ -36,6 +36,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:packages/db
+      '@workspace/object-storage-web':
+        specifier: workspace:*
+        version: link:packages/object-storage-web
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0

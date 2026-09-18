@@ -15,7 +15,8 @@ export type NotificationStatus =
 export type NotificationAction =
   | "MARK_DONE"
   | "RESCHEDULE"
-  | "SNOOZE_15";
+  | "SNOOZE_15"
+  | "SEE_TASK";
 
 export interface NotificationActionButton {
   action: NotificationAction;

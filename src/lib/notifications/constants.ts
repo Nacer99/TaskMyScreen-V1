@@ -51,6 +51,9 @@ export const ACTION_RESCHEDULE: NotificationAction =
 export const ACTION_SNOOZE_15: NotificationAction =
   "SNOOZE_15";
 
+export const ACTION_SEE_TASK: NotificationAction =
+  "SEE_TASK";
+
 /**
  * Button labels
  */
@@ -62,6 +65,9 @@ export const LABEL_RESCHEDULE =
 
 export const LABEL_SNOOZE =
   "Snooze 15 min";
+
+export const LABEL_SEE_TASK =
+  "See Task";
 
 /**
  * Plans
@@ -91,16 +97,16 @@ export const DEFAULT_THEME: NotificationTheme = {
 export const FREE_ACTIONS: NotificationActionButton[] =
   [
     {
-      action: ACTION_MARK_DONE,
-      title: LABEL_MARK_DONE,
+      action: ACTION_SEE_TASK,
+      title: LABEL_SEE_TASK,
     },
   ];
 
 export const PRO_ACTIONS: NotificationActionButton[] =
   [
     {
-      action: ACTION_MARK_DONE,
-      title: LABEL_MARK_DONE,
+      action: ACTION_SEE_TASK,
+      title: LABEL_SEE_TASK,
     },
     {
       action: ACTION_RESCHEDULE,

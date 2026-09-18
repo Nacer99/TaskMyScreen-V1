@@ -31,7 +31,7 @@ export default function Home() {
         transition={{ duration: 0.5, delay: 0.2 }}
         className="text-muted-foreground text-lg mb-10 max-w-sm"
       >
-        A focused personal space for your daily objectives. Calm, dark, and precise.
+        Get notified at the time that works for you.
       </motion.p>
       
       <motion.div

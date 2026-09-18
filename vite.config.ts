@@ -17,6 +17,13 @@ export default defineConfig({
     port: 8081,
     host: "0.0.0.0",
     strictPort: true,
-    allowedHosts: true // Autorise l'aperçu Web sécurisé via Cloud Shell
+    allowedHosts: true,
+    proxy: {
+      "/tms-api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tms-api/, "/api"),
+      },
+    },
   }
 });

@@ -43,9 +43,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const MAX_SOURCE_FILE_SIZE = 15 * 1024 * 1024; // 15MB — generous ceiling before compression
+const SUPPORTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
 /**
  * Compresses an image to max 1200px on longest side, JPEG 82% quality.
- * Used for free-tier users to reduce storage costs.
+ * Applied to every uploaded image regardless of plan — FREE and PRO both
+ * get compressed screenshots; there is no full-resolution tier.
  */
 async function compressImage(file: File): Promise<File> {
   const MAX_DIMENSION = 1200;
@@ -104,15 +108,16 @@ export default function TaskForm() {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { isPro, plan } = usePlan();
+  const { plan } = usePlan();
 
   // Image state — managed outside the form
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const { uploadFile, isUploading } = useUpload({
-    onError: () => toast({ title: "Image upload failed", variant: "destructive" }),
+    onError: (err) => toast({ title: "Image upload failed", description: err.message, variant: "destructive" }),
   });
 
   const { data: existingTask, isLoading: isTaskLoading } = useGetTask(taskId, {
@@ -186,13 +191,25 @@ export default function TaskForm() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+      toast({ title: "Unsupported file type", description: "Use JPEG, PNG, WebP or GIF.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    if (file.size > MAX_SOURCE_FILE_SIZE) {
+      toast({ title: "Image too large", description: "Maximum size is 15MB.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     if (imagePreview && imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview);
     }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setExistingImageUrl(null);
-  }, [imagePreview]);
+  }, [imagePreview, toast]);
 
   const handleRemoveImage = useCallback(() => {
     if (imagePreview && imagePreview.startsWith("blob:")) {
@@ -279,14 +296,19 @@ export default function TaskForm() {
     }
     const dueAtStr = date.toISOString();
 
-    // Upload image — compress for free users, original for PRO
+    // Upload image — compressed for every plan, FREE and PRO alike.
     let resolvedImageUrl: string | undefined = existingImageUrl || undefined;
     if (imageFile) {
-      const fileToUpload = isPro ? imageFile : await compressImage(imageFile);
-      const result = await uploadFile(fileToUpload);
-      if (result) {
-        resolvedImageUrl = `/api/storage${result.objectPath}`;
+      let fileToUpload: File;
+      try {
+        fileToUpload = await compressImage(imageFile);
+      } catch {
+        toast({ title: "Failed to process image", description: "Please try a different file.", variant: "destructive" });
+        return;
       }
+      const result = await uploadFile(fileToUpload);
+      if (!result) return; // useUpload already surfaced the specific error via onError
+      resolvedImageUrl = `/api/storage${result.objectPath}`;
     }
 
     const payload = {
@@ -439,18 +461,23 @@ export default function TaskForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground uppercase text-xs tracking-wider">Image Attachment (Optional)</p>
-                {!isPro && (
-                  <span className="text-[10px] text-muted-foreground/60 italic">Compressed on free plan</span>
-                )}
+                <span className="text-[10px] text-muted-foreground/60 italic">Compressed for faster loading</span>
               </div>
 
               {imagePreview ? (
                 <div className="relative rounded-xl overflow-hidden border border-border/50 bg-card">
-                  <img
-                    src={imagePreview}
-                    alt="Attachment preview"
-                    className="w-full max-h-48 object-cover"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsViewerOpen(true)}
+                    className="block w-full"
+                    aria-label="View image full screen"
+                  >
+                    <img
+                      src={imagePreview}
+                      alt="Attachment preview"
+                      className="w-full max-h-48 object-cover cursor-zoom-in"
+                    />
+                  </button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -475,7 +502,7 @@ export default function TaskForm() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -483,7 +510,7 @@ export default function TaskForm() {
               {isUploading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Uploading image{!isPro ? " (compressing...)" : "..."}  </span>
+                  <span>Compressing and uploading…</span>
                 </div>
               )}
             </div>
@@ -504,6 +531,31 @@ export default function TaskForm() {
           </form>
         </Form>
       </div>
+
+      {/* Fullscreen image viewer — mobile-friendly lightbox for the attached screenshot */}
+      {isViewerOpen && imagePreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+          onClick={() => setIsViewerOpen(false)}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-background/20 hover:bg-background/40 text-white z-10"
+            onClick={() => setIsViewerOpen(false)}
+            aria-label="Close image viewer"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+          <img
+            src={imagePreview}
+            alt="Attachment full view"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </motion.div>
   );
 }

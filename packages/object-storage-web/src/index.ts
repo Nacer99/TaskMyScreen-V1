@@ -5,8 +5,17 @@ export interface UploadResult {
   objectPath: string;
 }
 
+export class UploadError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "UploadError";
+    this.status = status;
+  }
+}
+
 export interface UseUploadOptions {
-  onError?: (error: unknown) => void;
+  onError?: (error: UploadError) => void;
 }
 
 /**
@@ -31,7 +40,7 @@ export function useUpload(options?: UseUploadOptions) {
         form.append("file", file);
 
         const res = await fetch(
-          `${(import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "")}/storage/upload`,
+          `${(import.meta.env.VITE_API_BASE_URL ?? "/tms-api").replace(/\/$/, "")}/storage/upload`,
           {
             method: "POST",
             headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -41,12 +50,26 @@ export function useUpload(options?: UseUploadOptions) {
         );
 
         if (!res.ok) {
-          throw new Error(`Upload failed with status ${res.status}`);
+          // Surface the real status/message instead of a single generic
+          // "upload failed" for every possible cause (misconfigured storage,
+          // rejected file type, auth) — the previous version swallowed this,
+          // making the actual cause of any future failure undiagnosable from
+          // the UI alone.
+          let message = `Upload failed with status ${res.status}`;
+          try {
+            const body = (await res.json()) as { message?: string };
+            if (body?.message) message = body.message;
+          } catch {
+            // non-JSON error body — keep the generic message
+          }
+          throw new UploadError(message, res.status);
         }
 
         return (await res.json()) as UploadResult;
       } catch (err) {
-        options?.onError?.(err);
+        const uploadError =
+          err instanceof UploadError ? err : new UploadError((err as Error)?.message ?? "Upload failed");
+        options?.onError?.(uploadError);
         return null;
       } finally {
         setIsUploading(false);

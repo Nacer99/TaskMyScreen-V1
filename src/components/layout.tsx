@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
-import { CheckSquare, LogOut, Moon, Sun, Zap } from "lucide-react";
+import { ReactNode, useEffect } from "react";
+import { CheckSquare, LogOut, Lock, Moon, Sun, Zap } from "lucide-react";
 import { useAuth } from "@clerk/react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,28 @@ export function Layout({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { isPro, plan } = usePlan();
 
+  // Dark Mode is a PRO feature. `isPro` is derived from usePlan(), which is
+  // sourced from GET /api/users/profile — not a client-editable flag — so a
+  // FREE user cannot keep dark mode by editing localStorage: this re-forces
+  // Day Mode on every load/plan change regardless of what was stored.
+  useEffect(() => {
+    if (!isPro && theme === "dark") {
+      toggleTheme();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPro, theme]);
+
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex justify-center">
       <div className="w-full max-w-md flex flex-col min-h-[100dvh] relative shadow-2xl bg-background border-x border-border/50">
         <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-primary/10 p-1.5 rounded-md">
-              <CheckSquare className="w-5 h-5 text-primary" />
-            </div>
-            <span className="font-bold text-lg tracking-tight">TaskMyScreen</span>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="bg-primary/10 p-1.5 rounded-md">
+                <CheckSquare className="w-5 h-5 text-primary" />
+              </div>
+              <span className="font-bold text-lg tracking-tight">TaskMyScreen</span>
+            </Link>
             {isPro && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary uppercase tracking-wide">
                 {plan === "lifetime" ? "Lifetime" : "Pro"}
@@ -40,19 +53,35 @@ export function Layout({ children }: { children: ReactNode }) {
                 </Button>
               </Link>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? (
-                <Sun className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <Moon className="w-4 h-4 text-muted-foreground" />
-              )}
-            </Button>
+            {isPro ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? (
+                  <Sun className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <Moon className="w-4 h-4 text-muted-foreground" />
+                )}
+              </Button>
+            ) : (
+              isSignedIn && (
+                <Link href="/upgrade">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full"
+                    title="Dark Mode is a Pro feature"
+                    aria-label="Dark Mode is a Pro feature — upgrade to unlock"
+                  >
+                    <Lock className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </Link>
+              )
+            )}
             {isSignedIn && (
               <Button
                 variant="ghost"

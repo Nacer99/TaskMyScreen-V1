@@ -31,11 +31,20 @@ const DEFAULT_BADGE = "/badge-icon.svg";
 
 const DEFAULT_ICON = "/notification-icon.svg";
 
-const ACTION_DONE = "done";
+// These must match, byte-for-byte, the NotificationAction string values in
+// src/lib/notifications/constants.ts — they are what renderer.ts puts in the
+// real Notification API's `actions[].action` field, and what the browser
+// echoes back as `event.action` on notificationclick. They previously did
+// NOT match ("done"/"reschedule" here vs "MARK_DONE"/"RESCHEDULE" there),
+// so no notification action button ever matched a case in the switch below
+// and every click silently fell through to `default`.
+const ACTION_DONE = "MARK_DONE";
 
-const ACTION_RESCHEDULE = "reschedule";
+const ACTION_RESCHEDULE = "RESCHEDULE";
 
-const ACTION_SNOOZE = "snooze";
+const ACTION_SNOOZE = "SNOOZE_15";
+
+const ACTION_SEE_TASK = "SEE_TASK";
 
 const MESSAGE_TYPES = {
 
@@ -282,20 +291,23 @@ self.addEventListener("notificationclick", (event) => {
 
       switch (action) {
 
+        case ACTION_SEE_TASK:
+
+          // FREE plan's only button — opens the task itself, never marks it
+          // done from the notification. The app has no separate read-only
+          // detail route, so /tasks/:id/edit (which already shows title,
+          // description, image and Edit/Delete) is the closest equivalent.
+          await reopenTaskEditor(data.taskId);
+
+          break;
+
         case ACTION_DONE:
 
-          await broadcast({
-
-            type: MESSAGE_TYPES.TASK_DONE,
-
-            taskId: data.taskId,
-
-            notificationId: data.notificationId,
-
-          });
-
-          await focusExistingWindow(TASKS_URL);
-
+          // Mark Done is no longer offered on any plan's notification —
+          // completion happens in-app via "Mark as complete" only. Same
+          // treatment as Snooze below: case removed from the switch
+          // (unreachable, since no button emits ACTION_DONE anymore) but the
+          // constant/message type stay defined for traceability.
           break;
 
         case ACTION_RESCHEDULE:

@@ -7,7 +7,7 @@
  * never makes authorization decisions itself.
  */
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/tms-api").replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;

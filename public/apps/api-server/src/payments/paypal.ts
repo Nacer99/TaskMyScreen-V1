@@ -19,7 +19,7 @@ const BASE_URL =
 // prices. Never trust a price submitted by the client.
 const PRICES: Record<PriceType, { value: string; currency: string }> = {
   monthly: { value: "4.99", currency: "USD" },
-  annual: { value: "29.99", currency: "USD" },
+  annual: { value: "39.99", currency: "USD" },
   lifetime: { value: "79.99", currency: "USD" },
 };
 

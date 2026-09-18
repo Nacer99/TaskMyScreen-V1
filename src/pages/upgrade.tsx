@@ -27,9 +27,9 @@ const PLANS = [
   {
     id: "annual" as PriceType,
     name: "Annual",
-    price: "$29.99",
+    price: "$39.99",
     period: "/yr",
-    detail: "$2.50 / month · Save 50%",
+    detail: "$3.33 / month · Save 33%",
     badge: "Best Value",
     highlighted: true,
   },
@@ -47,7 +47,7 @@ const PLANS = [
 const FEATURE_COMPARISON = [
   { free: "20 tasks / month", pro: "Unlimited tasks" },
   { free: "Fixed-time reminders only", pro: "Reschedule from alerts" },
-  { free: "Compressed images", pro: "Full-resolution images" },
+  { free: "Day Mode only", pro: "Dark Mode + Day Mode" },
 ];
 
 export default function Upgrade() {
@@ -166,7 +166,7 @@ export default function Upgrade() {
           </div>
           <h2 className="text-2xl font-bold">Unlock Your Full Potential</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Unlimited tasks, smart reminders,<br />and full-resolution images.
+            Unlimited tasks and smart reminders.
           </p>
         </div>
 

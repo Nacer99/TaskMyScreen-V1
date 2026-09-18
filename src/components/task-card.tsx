@@ -91,12 +91,13 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
           {/* Completion toggle */}
           <button
             onClick={handleToggle}
+            title={isCompleted ? "Mark as incomplete" : "Mark as complete"}
             className={`shrink-0 w-6 h-6 mt-0.5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
               isCompleted
                 ? "bg-primary border-primary text-primary-foreground"
                 : "border-muted-foreground/30 hover:border-primary/60 text-transparent"
             }`}
-            aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+            aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
           >
             <Check className="w-3.5 h-3.5" strokeWidth={3} />
           </button>

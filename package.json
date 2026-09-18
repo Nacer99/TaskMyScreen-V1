@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite.config.ts --host 0.0.0.0",
+    "dev": "pnpm --filter @workspace/api-server dev & vite --config vite.config.ts --host 0.0.0.0; wait",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -78,9 +78,9 @@
   "dependencies": {
     "@clerk/react": "^6.7.2",
     "@clerk/themes": "^2.4.57",
-
     "@workspace/api-client-react": "workspace:*",
     "@workspace/api-zod": "workspace:*",
-    "@workspace/db": "workspace:*"
+    "@workspace/db": "workspace:*",
+    "@workspace/object-storage-web": "workspace:*"
   }
 }
