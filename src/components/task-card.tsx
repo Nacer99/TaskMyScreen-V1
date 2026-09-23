@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { format, isPast, differenceInMinutes } from "date-fns";
 import { Check, Clock, AlertCircle, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
+import { useAuthenticatedImage } from "@/hooks/use-authenticated-image";
 import { Task } from "@workspace/api-client-react";
 import { useCompleteTask } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ function getDueStatus(dueAt: string | null | undefined, completed: boolean) {
 export function TaskCard({ task, onStatusChange }: TaskCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const authenticatedImageUrl = useAuthenticatedImage(task.imageUrl);
   const [isCompleted, setIsCompleted] = useState(task.completed);
 
   const completeTaskMutation = useCompleteTask({
@@ -152,7 +154,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
           {task.imageUrl && (
             <div className="shrink-0 ml-1">
               <img
-                src={task.imageUrl}
+                src={authenticatedImageUrl || undefined}
                 alt=""
                 className="w-14 h-14 rounded-lg object-cover border border-border/50"
                 onError={(e) => {
