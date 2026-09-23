@@ -6,6 +6,7 @@ export function useAuthenticatedImage(imageUrl?: string | null) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("AUTH IMAGE URL:", imageUrl);
     if (!imageUrl) {
       setSrc(null);
       return;
