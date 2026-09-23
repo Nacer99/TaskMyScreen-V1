@@ -26,7 +26,7 @@ export function useAuthenticatedImage(imageUrl?: string | null) {
 
         console.log("AUTH IMAGE RESPONSE:", resolvedUrl, response.status); if (!response.ok) return;
 
-        const blob = await response.blob();
+        const blob = await response.blob(); console.log("AUTH IMAGE BLOB:", blob.type, blob.size);
         objectUrl = URL.createObjectURL(blob);
 
         if (!cancelled) setSrc(objectUrl);
