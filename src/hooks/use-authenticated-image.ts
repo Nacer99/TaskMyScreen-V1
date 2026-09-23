@@ -24,7 +24,7 @@ export function useAuthenticatedImage(imageUrl?: string | null) {
           credentials: "include",
         });
 
-        if (!response.ok) return;
+        console.log("AUTH IMAGE RESPONSE:", resolvedUrl, response.status); if (!response.ok) return;
 
         const blob = await response.blob();
         objectUrl = URL.createObjectURL(blob);
