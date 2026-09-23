@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 import {
-    console.log("TASK FORM MOUNTED");
   useGetTask,
   useCreateTask,
   useUpdateTask,
@@ -96,6 +95,7 @@ async function compressImage(file: File): Promise<File> {
 }
 
 export default function TaskForm() {
+  console.log("TASK FORM MOUNTED");
   const [, setLocation] = useLocation();
   const { id } = useParams();
   const search = useSearch();
