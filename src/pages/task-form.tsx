@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useAuthenticatedImage } from "@/hooks/use-authenticated-image";
 import { useLocation, useParams, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 import {
+    console.log("TASK FORM MOUNTED");
   useGetTask,
   useCreateTask,
   useUpdateTask,
@@ -114,7 +116,9 @@ export default function TaskForm() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const authenticatedExistingImageUrl = useAuthenticatedImage(existingImageUrl);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const displayImageUrl = imagePreview?.startsWith("blob:") ? imagePreview : authenticatedExistingImageUrl;
 
   const { uploadFile, isUploading } = useUpload({
     onError: (err) => toast({ title: "Image upload failed", description: err.message, variant: "destructive" }),
@@ -308,7 +312,7 @@ export default function TaskForm() {
       }
       const result = await uploadFile(fileToUpload);
       if (!result) return; // useUpload already surfaced the specific error via onError
-      resolvedImageUrl = `/api/storage${result.objectPath}`;
+      resolvedImageUrl = `/tms-api/storage${result.objectPath}`;
     }
 
     const payload = {
@@ -461,7 +465,6 @@ export default function TaskForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground uppercase text-xs tracking-wider">Image Attachment (Optional)</p>
-                <span className="text-[10px] text-muted-foreground/60 italic">Compressed for faster loading</span>
               </div>
 
               {imagePreview ? (
@@ -473,7 +476,7 @@ export default function TaskForm() {
                     aria-label="View image full screen"
                   >
                     <img
-                      src={imagePreview}
+                      src={displayImageUrl || undefined}
                       alt="Attachment preview"
                       className="w-full max-h-48 object-cover cursor-zoom-in"
                     />
@@ -549,7 +552,7 @@ export default function TaskForm() {
             <X className="w-5 h-5" />
           </Button>
           <img
-            src={imagePreview}
+            src={displayImageUrl || undefined}
             alt="Attachment full view"
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
