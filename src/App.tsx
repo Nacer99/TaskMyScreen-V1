@@ -10,7 +10,6 @@ import Home from "@/pages/home";
 import Tasks from "@/pages/tasks";
 import TaskForm from "@/pages/task-form";
 import Upgrade from "@/pages/upgrade";
-import NotifyPrototype from "@/pages/notify-prototype";
 import { Layout } from "@/components/layout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useSwMessages } from "@/hooks/use-sw-messages";
@@ -181,7 +180,6 @@ function ClerkProviderWithRoutes() {
           </Route>
 
           {/* Phase 1: Notification prototype — public */}
-          <Route path="/notify-test" component={NotifyPrototype} />
 
           <Route component={NotFound} />
         </Switch>

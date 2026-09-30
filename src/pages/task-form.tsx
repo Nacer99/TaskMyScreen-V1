@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthenticatedImage } from "@/hooks/use-authenticated-image";
-import { useLocation, useParams, useSearch } from "wouter";
+import { Link, useLocation, useParams, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -110,7 +110,10 @@ export default function TaskForm() {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { plan } = usePlan();
+  const { plan, isPro } = usePlan();
+  // FREE can view an existing task but not edit it — enforced again server-side
+  // in PATCH /api/tasks/:id, this is not the only line of defense.
+  const isReadOnlyForFree = isEditing && !isPro;
 
   // Image state — managed outside the form
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -352,7 +355,12 @@ export default function TaskForm() {
           <Button variant="ghost" size="icon" className="-ml-2 h-9 w-9 rounded-full" onClick={() => setLocation("/tasks")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="font-semibold text-lg">{isEditing ? "Edit Task" : "New Task"}</h1>
+          <div className="flex flex-col leading-tight">
+            <Link href="/" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+              TaskMyScreen
+            </Link>
+            <h1 className="font-semibold text-lg">{isEditing ? "Edit Task" : "New Task"}</h1>
+          </div>
         </div>
         {isEditing && (
           <Button
@@ -369,7 +377,14 @@ export default function TaskForm() {
 
       <div className="flex-1 overflow-y-auto p-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-24">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <fieldset disabled={isReadOnlyForFree} className="space-y-6 pb-24 border-0 p-0 m-0 min-w-0">
+
+            {isReadOnlyForFree && (
+              <div className="rounded-xl border border-border/50 bg-card px-4 py-3 text-sm text-muted-foreground">
+                Editing is a Pro feature. You can view this task, but upgrade to make changes.
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -531,6 +546,7 @@ export default function TaskForm() {
                 </Button>
               </div>
             </div>
+          </fieldset>
           </form>
         </Form>
       </div>

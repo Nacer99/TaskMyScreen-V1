@@ -8,6 +8,7 @@ import {
   assertQuotaAvailable,
   getMonthlyTasksUsed,
   getTaskCounts,
+  isPro,
   type Plan,
 } from "../services/plan.js";
 
@@ -141,6 +142,23 @@ router.patch("/:id", async (req, res) => {
   if (!result.success) {
     res.status(400).json({ success: false, code: "VALIDATION_ERROR", message: "Données invalides", details: result.error.format() });
     return;
+  }
+
+  // FREE can complete/reopen a task (isCompleted) but cannot edit its
+  // content — enforced here, not just hidden in the UI, since this route
+  // can be called directly regardless of what the frontend shows.
+  const isRealEdit =
+    result.data.title !== undefined ||
+    result.data.description !== undefined ||
+    result.data.imageUrl !== undefined ||
+    result.data.reminderTime !== undefined;
+
+  if (isRealEdit) {
+    const plan = await getUserPlan(userId);
+    if (!isPro(plan)) {
+      res.status(403).json({ success: false, code: "PLAN_RESTRICTED", message: "Editing a task requires a Pro plan" });
+      return;
+    }
   }
 
   try {

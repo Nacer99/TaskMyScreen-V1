@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Bell, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 export default function Home() {
   return (
@@ -48,15 +48,6 @@ export default function Home() {
         </Link>
         <div className="mt-4 text-sm text-muted-foreground">
           Don't have an account? <Link href="/sign-up" className="text-primary hover:underline font-medium">Create one</Link>
-        </div>
-
-        <div className="mt-8 pt-8 border-t border-border/40 w-full">
-          <Link href="/notify-test">
-            <button className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <Bell className="w-4 h-4" />
-              Test notification system
-            </button>
-          </Link>
         </div>
       </motion.div>
     </div>
