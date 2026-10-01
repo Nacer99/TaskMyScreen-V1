@@ -324,7 +324,7 @@ self.addEventListener("notificationclick", (event) => {
 
           await broadcast({
 
-            type: MESSAGE_TYPES.TASK_RESCHEDULE,
+            type: MESSAGE_TYPES.NAVIGATE_RESCHEDULE,
 
             taskId: data.taskId,
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthenticatedImage } from "@/hooks/use-authenticated-image";
-import { Link, useLocation, useParams, useSearch } from "wouter";
+import { useLocation, useParams, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -356,9 +356,6 @@ export default function TaskForm() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex flex-col leading-tight">
-            <Link href="/" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-              TaskMyScreen
-            </Link>
             <h1 className="font-semibold text-lg">{isEditing ? "Edit Task" : "New Task"}</h1>
           </div>
         </div>
@@ -476,6 +473,8 @@ export default function TaskForm() {
               </div>
             </div>
 
+          </fieldset>
+
             {/* Image attachment */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -502,6 +501,7 @@ export default function TaskForm() {
                     size="icon"
                     className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur hover:bg-background"
                     onClick={handleRemoveImage}
+                    disabled={isReadOnlyForFree}
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -510,6 +510,7 @@ export default function TaskForm() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={isReadOnlyForFree}
                   className="w-full flex items-center justify-center gap-3 h-20 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 bg-card transition-colors text-muted-foreground hover:text-primary"
                 >
                   <ImagePlus className="w-5 h-5" />
@@ -522,6 +523,7 @@ export default function TaskForm() {
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
+                disabled={isReadOnlyForFree}
                 onChange={handleFileChange}
               />
 
@@ -539,14 +541,13 @@ export default function TaskForm() {
                   type="submit"
                   size="lg"
                   className="w-full rounded-full h-14 text-base font-semibold shadow-lg shadow-primary/20"
-                  disabled={isPending}
+                  disabled={isPending || isReadOnlyForFree}
                 >
                   {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
                   {isEditing ? "Save Changes" : "Create Task"}
                 </Button>
               </div>
             </div>
-          </fieldset>
           </form>
         </Form>
       </div>
