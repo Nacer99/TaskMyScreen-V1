@@ -375,7 +375,7 @@ export default function TaskForm() {
       <div className="flex-1 overflow-y-auto p-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-          <fieldset disabled={isReadOnlyForFree} className="space-y-6 pb-24 border-0 p-0 m-0 min-w-0">
+          <fieldset disabled={isReadOnlyForFree} className="space-y-6 pb-32 border-0 p-0 m-0 min-w-0">
 
             {isReadOnlyForFree && (
               <div className="rounded-xl border border-border/50 bg-card px-4 py-3 text-sm text-muted-foreground">
