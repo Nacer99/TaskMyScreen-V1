@@ -32,8 +32,8 @@ import { scheduleTask, cancelTask } from "@/lib/notifications";
 import { useUpload } from "@workspace/object-storage-web";
 import { usePlan } from "@/hooks/use-plan";
 
-const SHARED_MEDIA_CACHE = "taskmyscreen-shared-media-v1";
-const SHARED_IMAGE_KEY = "pending-share-image";
+const SHARED_MEDIA_CACHE = "taskmyscreen-share-v2";
+const SHARED_IMAGE_KEY = "shared-image";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
